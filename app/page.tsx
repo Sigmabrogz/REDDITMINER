@@ -302,7 +302,7 @@ export default function Home() {
                 {fromCache && (
                   <span className="flex items-center gap-1 text-xs text-[var(--accent-tertiary)] bg-[var(--accent-tertiary)] bg-opacity-10 px-2 py-1 rounded">
                     <BoltIcon size={12} />
-                    from cache
+                    Cached
                   </span>
                 )}
                 {store.normalizedData && (
