@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#1A1A1A" stroke="#FF6B35" stroke-width="2"/>
+  
+  <!-- Pickaxe handle -->
+  <line x1="8" y1="24" x2="18" y2="14" stroke="#F7C94B" stroke-width="2.5" stroke-linecap="round"/>
+  
+  <!-- Pickaxe head -->
+  <path d="M16 12 L22 8 L24 10 L20 16 Z" fill="#4ECDC4"/>
+  <path d="M18 14 L14 10 L16 8 L20 12 Z" fill="#4ECDC4"/>
+  
+  <!-- Sparkle/mine effect -->
+  <circle cx="23" cy="7" r="1.5" fill="#FF6B35"/>
+  <circle cx="26" cy="10" r="1" fill="#F7C94B"/>
+</svg>
+
