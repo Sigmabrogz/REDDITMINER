@@ -72,7 +72,8 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
           if (!cancelled && aiResult) {
             setAiInsight(aiResult);
           } else if (!cancelled && !aiResult) {
-            setAiError('AI analysis unavailable. Using pattern matching.');
+            // AI not available - pattern matching is still great!
+            setAiError(null); // Don't show error, pattern matching works well
           }
         }
 

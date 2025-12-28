@@ -6,7 +6,9 @@
 
 import { NormalizedComment } from './schemas';
 
-const OPENROUTER_API_KEY = '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';
+// API key can be set via environment variable or hardcoded
+// Get your free key at: https://openrouter.ai/keys
+const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
 const MODEL = 'xiaomi/mimo-v2-flash:free';
 
 export interface AIInsight {
@@ -38,6 +40,12 @@ export async function analyzeWithAI(
   threadTitle: string,
   onProgress?: (step: string) => void
 ): Promise<AIInsight | null> {
+  // Skip AI analysis if no API key is configured
+  if (!OPENROUTER_API_KEY) {
+    console.log('OpenRouter API key not configured. Using pattern-based analysis.');
+    return null;
+  }
+
   try {
     onProgress?.('Preparing comments for AI analysis...');
     
