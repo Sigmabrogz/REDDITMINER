@@ -8,7 +8,7 @@ import { NormalizedComment } from './schemas';
 
 // API key can be set via environment variable or hardcoded
 // Get your free key at: https://openrouter.ai/keys
-const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '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';
 const MODEL = 'xiaomi/mimo-v2-flash:free';
 
 // ============================================
