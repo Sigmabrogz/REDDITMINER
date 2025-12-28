@@ -24,6 +24,95 @@ import { ExportDropdown } from '@/components/export-dropdown';
 import { HistorySidebar } from '@/components/history-sidebar';
 import { PickaxeIcon, BoltIcon, AlertIcon, StarIcon, GitHubIcon, XIcon, ArrowLeftIcon } from '@/components/icons';
 import confetti from 'canvas-confetti';
+import { normalizeThread, buildJsonUrl } from '@/lib/reddit';
+import { RedditRawResponse, NormalizedData } from '@/lib/schemas';
+
+// ============================================
+// CLIENT-SIDE FETCH WITH MULTIPLE PROXY FALLBACKS
+// This runs in the USER's browser, bypassing Vercel IP blocking
+// ============================================
+async function fetchThreadClientSide(
+  url: string,
+  options: { sort: string; limit: number }
+): Promise<[RedditRawResponse, RedditRawResponse]> {
+  const jsonUrl = buildJsonUrl(url, options);
+  
+  // Multiple CORS proxies to try (in order of reliability)
+  const proxies = [
+    // Method 1: codetabs.com (most reliable)
+    (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+    
+    // Method 2: allorigins.win (backup)
+    (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+    
+    // Method 3: corsproxy.io (backup)
+    (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    
+    // Method 4: cors-anywhere alternative
+    (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  ];
+  
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      const proxyUrl = proxies[i](jsonUrl);
+      console.log(`[ThreadMiner] Trying proxy ${i + 1}/${proxies.length}: ${proxyUrl.substring(0, 80)}...`);
+      
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        console.log(`[ThreadMiner] Proxy ${i + 1} returned ${response.status}`);
+        continue; // Try next proxy
+      }
+      
+      let text = await response.text();
+      
+      // Handle allorigins.win wrapper format
+      if (text.startsWith('{') && text.includes('"contents"')) {
+        try {
+          const wrapper = JSON.parse(text);
+          text = wrapper.contents || wrapper.data || text;
+        } catch {
+          // Not JSON wrapper, continue with text
+        }
+      }
+      
+      // Check if response is HTML (error page) instead of JSON
+      if (text.trim().startsWith('<')) {
+        console.log(`[ThreadMiner] Proxy ${i + 1} returned HTML error`);
+        continue; // Try next proxy
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.log(`[ThreadMiner] Proxy ${i + 1} JSON parse failed:`, e);
+        continue; // Try next proxy
+      }
+      
+      if (!Array.isArray(data) || data.length < 2) {
+        console.log(`[ThreadMiner] Proxy ${i + 1} returned invalid data structure`);
+        continue; // Try next proxy
+      }
+      
+      console.log(`[ThreadMiner] Success with proxy ${i + 1}!`);
+      return data as [RedditRawResponse, RedditRawResponse];
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error('Unknown error');
+      console.log(`[ThreadMiner] Proxy ${i + 1} error:`, e);
+      continue; // Try next proxy
+    }
+  }
+  
+  // All proxies failed
+  throw lastError || new Error('All fetch methods failed. Reddit may be blocking requests. Please try again later.');
+}
 
 export default function Home() {
   const store = useMinerStore();
@@ -70,37 +159,88 @@ export default function Home() {
       return;
     }
 
-    // Fresh fetch
+    // Fresh fetch - try multiple methods
     setFromCache(false);
     store.setLoading(true, 'fetching');
 
     try {
-      // Step 1: Fetch thread
-      const response = await fetch('/api/fetch-thread', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: store.url,
-          depth: store.depth,
-          sort: store.sort,
-          maxComments: store.maxComments,
-          minScore: store.minScore,
-        }),
-      });
+      let result: { raw: [RedditRawResponse, RedditRawResponse]; data: NormalizedData } | null = null;
+      let serverFailed = false;
 
-      store.setLoading(true, 'normalizing');
+      // METHOD 1: Try server-side API first (works locally, may fail on Vercel)
+      try {
+        console.log('[ThreadMiner] Attempting server-side fetch...');
+        const response = await fetch('/api/fetch-thread', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: store.url,
+            depth: store.depth,
+            sort: store.sort,
+            maxComments: store.maxComments,
+            minScore: store.minScore,
+          }),
+        });
 
-      const result = await response.json();
+        const serverResult = await response.json();
 
-      if (!result.success) {
-        store.setError(result.error || 'Failed to fetch thread');
+        if (serverResult.success) {
+          console.log('[ThreadMiner] Server-side fetch succeeded!');
+          result = {
+            raw: serverResult.raw,
+            data: serverResult.data,
+          };
+        } else {
+          // Server returned error - try client-side fallback
+          console.log('[ThreadMiner] Server-side failed:', serverResult.error);
+          serverFailed = true;
+        }
+      } catch (serverError) {
+        // Network error on server route - try client-side fallback
+        console.log('[ThreadMiner] Server-side error:', serverError);
+        serverFailed = true;
+      }
+
+      // METHOD 2: Client-side fallback with CORS proxies (bypasses Vercel IP blocking)
+      if (serverFailed || !result) {
+        console.log('[ThreadMiner] Falling back to client-side fetch with proxies...');
+        store.setLoading(true, 'fetching');
+        
+        try {
+          const raw = await fetchThreadClientSide(store.url, {
+            sort: store.sort,
+            limit: Math.min(store.maxComments * 2, 500),
+          });
+
+          store.setLoading(true, 'normalizing');
+
+          // Normalize the data client-side
+          const normalized = normalizeThread(raw, {
+            depth: store.depth,
+            maxComments: store.maxComments,
+            minScore: store.minScore,
+          });
+
+          result = { raw, data: normalized };
+          console.log('[ThreadMiner] Client-side fetch succeeded!');
+        } catch (clientError) {
+          // Both methods failed
+          console.error('[ThreadMiner] All methods failed:', clientError);
+          store.setLoading(false, 'idle');
+          store.setError(clientError instanceof Error ? clientError.message : 'Failed to fetch thread. Please try again.');
+          return;
+        }
+      }
+
+      if (!result || !result.data) {
+        store.setLoading(false, 'idle');
+        store.setError('Failed to fetch thread. Please try again.');
         return;
       }
 
-      // Step 2: If insights mode, extract signals
+      // Step 3: If insights mode, extract signals
       if (store.format === 'insights') {
         store.setLoading(true, 'analyzing');
-        // Small delay to show the step (signals are extracted client-side)
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
@@ -126,6 +266,7 @@ export default function Home() {
         colors: ['#FF6B35', '#F7C94B', '#4ECDC4'],
       });
     } catch (error) {
+      store.setLoading(false, 'idle');
       store.setError(error instanceof Error ? error.message : 'Something went wrong');
     }
   };
