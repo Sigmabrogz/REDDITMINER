@@ -28,7 +28,7 @@ import { normalizeThread, buildJsonUrl } from '@/lib/reddit';
 import { RedditRawResponse, NormalizedData } from '@/lib/schemas';
 
 // ============================================
-// CLIENT-SIDE FETCH WITH MULTIPLE PROXY FALLBACKS
+// CLIENT-SIDE FETCH WITH MULTIPLE FALLBACKS
 // This runs in the USER's browser, bypassing Vercel IP blocking
 // ============================================
 async function fetchThreadClientSide(
@@ -40,19 +40,45 @@ async function fetchThreadClientSide(
   // Browser-like User-Agent to avoid Reddit bot detection
   const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   
-  // Multiple CORS proxies to try (in order of reliability)
-  // Reordered: allorigins.win/raw first (most reliable for Reddit)
+  // METHOD 1: Direct fetch from browser (NO PROXY) - Reddit allows this!
+  // Reddit's .json endpoints work from browsers without CORS issues
+  try {
+    console.log('[ThreadMiner] Trying direct browser fetch (no proxy)...');
+    const directResponse = await fetch(jsonUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': browserUserAgent,
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.reddit.com/',
+      },
+      credentials: 'omit', // Don't send cookies
+    });
+    
+    if (directResponse.ok) {
+      const data = await directResponse.json();
+      if (Array.isArray(data) && data.length >= 2) {
+        console.log('[ThreadMiner] Direct fetch succeeded!');
+        return data as [RedditRawResponse, RedditRawResponse];
+      }
+    }
+    console.log('[ThreadMiner] Direct fetch failed:', directResponse.status);
+  } catch (directError) {
+    console.log('[ThreadMiner] Direct fetch error:', directError);
+  }
+  
+  // METHOD 2: CORS proxies (fallback if direct fails)
   const proxies = [
-    // Method 1: allorigins.win/raw (most reliable for Reddit)
+    // Proxy 1: allorigins.win/raw (most reliable for Reddit)
     (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     
-    // Method 2: codetabs.com (backup)
+    // Proxy 2: codetabs.com (backup)
     (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
     
-    // Method 3: allorigins.win/get (backup)
+    // Proxy 3: allorigins.win/get (backup)
     (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
     
-    // Method 4: corsproxy.io (backup)
+    // Proxy 4: corsproxy.io (backup)
     (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
   ];
   
