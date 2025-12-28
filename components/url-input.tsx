@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMinerStore } from '@/lib/store';
+import { isValidRedditUrl } from '@/lib/reddit';
 
 // Validation result type
 interface ValidationResult {
@@ -40,63 +41,42 @@ function validateRedditUrl(url: string): ValidationResult {
     return { valid: false, message: 'Paste a Reddit thread URL (should contain /comments/)' };
   }
 
-  // Final regex check
-  const REDDIT_URL_REGEX = /^https?:\/\/(www\.|old\.|new\.)?reddit\.com\/r\/[\w]+\/comments\/[\w]+/;
-  if (!REDDIT_URL_REGEX.test(url)) {
+  // Use the same validation as the button
+  if (!isValidRedditUrl(url)) {
     return { valid: false, message: 'Invalid Reddit thread URL format' };
   }
 
   return { valid: true, message: null };
 }
 
-// Debounce hook
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-
 export function URLInput() {
   const { url, setUrl, isLoading } = useMinerStore();
-  const [localUrl, setLocalUrl] = useState(url);
   const [isFocused, setIsFocused] = useState(false);
   const [validation, setValidation] = useState<ValidationResult>({ valid: false, message: null });
 
-  // Debounce the URL for store sync (300ms)
-  const debouncedUrl = useDebounce(localUrl, 300);
-
-  // Sync debounced URL to store
+  // Validate on every URL change
   useEffect(() => {
-    setUrl(debouncedUrl);
-  }, [debouncedUrl, setUrl]);
+    setValidation(validateRedditUrl(url));
+  }, [url]);
 
-  // Validate on every local change (instant feedback)
-  useEffect(() => {
-    setValidation(validateRedditUrl(localUrl));
-  }, [localUrl]);
-
-  // Handle input change
+  // Handle input change - directly update store
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalUrl(e.target.value);
-  }, []);
+    setUrl(e.target.value);
+  }, [setUrl]);
 
   // Handle paste - common use case
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     // Get the pasted text directly from clipboard
     const pastedText = e.clipboardData.getData('text');
     if (pastedText) {
-      // Set immediately with the pasted content
-      setLocalUrl(pastedText);
+      // Prevent default paste and set directly
+      e.preventDefault();
+      setUrl(pastedText);
     }
-  }, []);
+  }, [setUrl]);
 
-  const showError = validation.message && !validation.valid && localUrl.length > 15;
-  const showSuccess = validation.valid && localUrl.length > 20;
+  const showError = validation.message && !validation.valid && url.length > 15;
+  const showSuccess = validation.valid && url.length > 20;
 
   return (
     <div className="relative w-full">
@@ -113,7 +93,7 @@ export function URLInput() {
       >
         <input
           type="url"
-          value={localUrl}
+          value={url}
           onChange={handleChange}
           onPaste={handlePaste}
           onFocus={() => setIsFocused(true)}
