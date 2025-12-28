@@ -37,19 +37,23 @@ async function fetchThreadClientSide(
 ): Promise<[RedditRawResponse, RedditRawResponse]> {
   const jsonUrl = buildJsonUrl(url, options);
   
+  // Browser-like User-Agent to avoid Reddit bot detection
+  const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  
   // Multiple CORS proxies to try (in order of reliability)
+  // Reordered: allorigins.win/raw first (most reliable for Reddit)
   const proxies = [
-    // Method 1: codetabs.com (most reliable)
+    // Method 1: allorigins.win/raw (most reliable for Reddit)
+    (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    
+    // Method 2: codetabs.com (backup)
     (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
     
-    // Method 2: allorigins.win (backup)
+    // Method 3: allorigins.win/get (backup)
     (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
     
-    // Method 3: corsproxy.io (backup)
+    // Method 4: corsproxy.io (backup)
     (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    
-    // Method 4: cors-anywhere alternative
-    (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   ];
   
   let lastError: Error | null = null;
@@ -62,6 +66,7 @@ async function fetchThreadClientSide(
       const response = await fetch(proxyUrl, {
         headers: {
           'Accept': 'application/json',
+          'User-Agent': browserUserAgent,
         },
       });
       
