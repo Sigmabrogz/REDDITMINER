@@ -7,7 +7,7 @@
 import { NormalizedComment } from './schemas';
 
 const OPENROUTER_API_KEY = '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';
-const MODEL = 'xiaomi/mimo-vl-1b-flash:free';
+const MODEL = 'xiaomi/mimo-v2-flash:free';
 
 export interface AIInsight {
   painPoints: {
