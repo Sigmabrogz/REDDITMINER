@@ -579,3 +579,92 @@ export function UserIcon({ className = '', size = 16 }: IconProps) {
   );
 }
 
+// Target/Crosshair icon
+export function TargetIcon({ className = '', size = 20 }: IconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      className={className}
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+      <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="2"/>
+      <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    </svg>
+  );
+}
+
+// Trend Up icon
+export function TrendUpIcon({ className = '', size = 20 }: IconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      className={className}
+    >
+      <path 
+        d="M23 6L13.5 15.5L8.5 10.5L1 18" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+      />
+      <path 
+        d="M17 6H23V12" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Shield icon
+export function ShieldIcon({ className = '', size = 20 }: IconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      className={className}
+    >
+      <path 
+        d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Zap/Lightning icon (for TL;DR)
+export function ZapIcon({ className = '', size = 20 }: IconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      className={className}
+    >
+      <path 
+        d="M13 2L3 14H12L11 22L21 10H12L13 2Z" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        fill="currentColor"
+        fillOpacity="0.2"
+      />
+    </svg>
+  );
+}
+

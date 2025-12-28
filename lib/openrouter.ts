@@ -1,7 +1,7 @@
 // ============================================
-// THREADMINER - OpenRouter AI Integration
+// THREADMINER - Founder-Focused AI Analysis
 // https://github.com/Sigmabrogz/REDDITMINER
-// Uses xiaomi/mimo-v2-flash:free model
+// Sharp insights for builders, not fluff
 // ============================================
 
 import { NormalizedComment } from './schemas';
@@ -11,76 +11,146 @@ import { NormalizedComment } from './schemas';
 const OPENROUTER_API_KEY = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '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';
 const MODEL = 'xiaomi/mimo-v2-flash:free';
 
-export interface AIInsight {
-  painPoints: {
-    text: string;
-    comment: NormalizedComment;
-    confidence: number;
-  }[];
-  buyingIntent: {
-    text: string;
-    comment: NormalizedComment;
-    stage: 'awareness' | 'consideration' | 'decision';
-  }[];
-  solutions: {
-    text: string;
-    comment: NormalizedComment;
-    productMentioned?: string;
-  }[];
-  shillWarnings: {
-    text: string;
-    comment: NormalizedComment;
-    reason: string;
-  }[];
-  summary: string;
+// ============================================
+// Founder-Focused Insight Types
+// ============================================
+
+export interface MarketSignals {
+  demandStrength: 'hot' | 'warm' | 'cold';
+  demandReason: string;
+  priceRange: string;
+  urgency: 'high' | 'medium' | 'low';
+  urgencyReason: string;
 }
+
+export interface GoldNugget {
+  insight: string;
+  actionable: string;
+  comment: NormalizedComment;
+}
+
+export interface BuyerSignal {
+  quote: string;
+  stage: 'ready' | 'researching' | 'curious';
+  followUp: string;
+  comment: NormalizedComment;
+}
+
+export interface CompetitorIntel {
+  name: string;
+  sentiment: 'loved' | 'hated' | 'meh';
+  weakness: string;
+  commentIndex: number;
+}
+
+export interface RedFlag {
+  issue: string;
+  severity: 'dealbreaker' | 'caution' | 'minor';
+  comment: NormalizedComment;
+}
+
+export interface ShillWarning {
+  reason: string;
+  comment: NormalizedComment;
+}
+
+export interface AIInsight {
+  // The ONE thing a founder should know
+  tldr: string;
+  
+  // Market pulse
+  marketSignals: MarketSignals;
+  
+  // Problems worth solving (max 5)
+  goldNuggets: GoldNugget[];
+  
+  // People ready to pay
+  buyerSignals: BuyerSignal[];
+  
+  // Competitor landscape
+  competitors: CompetitorIntel[];
+  
+  // Why this market might suck
+  redFlags: RedFlag[];
+  
+  // Suspicious activity
+  shills: ShillWarning[];
+}
+
+// ============================================
+// AI Analysis Function
+// ============================================
 
 export async function analyzeWithAI(
   comments: NormalizedComment[],
   threadTitle: string,
   onProgress?: (step: string) => void
 ): Promise<AIInsight | null> {
-  // Skip AI analysis if no API key is configured
   if (!OPENROUTER_API_KEY) {
-    console.log('OpenRouter API key not configured. Using pattern-based analysis.');
+    console.log('OpenRouter API key not configured.');
     return null;
   }
 
   try {
-    onProgress?.('Preparing comments for AI analysis...');
+    onProgress?.('Scanning for founder insights...');
     
-    // Take top 50 comments by score for analysis (to stay within token limits)
+    // Take top 50 comments by score
     const topComments = [...comments]
       .sort((a, b) => b.score - a.score)
       .slice(0, 50);
     
-    // Format comments for the prompt
+    // Format comments
     const commentsText = topComments
-      .map((c, i) => `[${i + 1}] (score: ${c.score}, by u/${c.author}): "${c.body.slice(0, 500)}"`)
+      .map((c, i) => `[${i + 1}] (score: ${c.score}, u/${c.author}): "${c.body.slice(0, 400)}"`)
       .join('\n\n');
     
-    const prompt = `Analyze these Reddit comments from the thread "${threadTitle}".
+    const prompt = `You are a sharp startup analyst. A founder is evaluating this Reddit thread for product-market fit signals.
+
+THREAD: "${threadTitle}"
 
 COMMENTS:
 ${commentsText}
 
-Provide a JSON response with this exact structure:
+Extract ACTIONABLE insights. Be ruthless - only flag what matters for building/selling a product.
+
+Return this exact JSON structure:
 {
-  "painPoints": [{"index": 1, "text": "summary of pain point", "confidence": 0.9}],
-  "buyingIntent": [{"index": 2, "text": "what they want to buy", "stage": "consideration"}],
-  "solutions": [{"index": 3, "text": "solution mentioned", "productMentioned": "ProductName"}],
-  "shillWarnings": [{"index": 4, "text": "why suspicious", "reason": "affiliate link"}],
-  "summary": "2-3 sentence summary of key insights"
+  "tldr": "One killer insight a founder should act on TODAY (be specific, not generic)",
+  "marketSignals": {
+    "demandStrength": "hot|warm|cold",
+    "demandReason": "Why this demand level (1 sentence)",
+    "priceRange": "$X-$Y range mentioned or 'unclear'",
+    "urgency": "high|medium|low",
+    "urgencyReason": "Why this urgency (1 sentence)"
+  },
+  "goldNuggets": [
+    {"index": 1, "insight": "Exact problem to solve", "actionable": "What to build/do about it"}
+  ],
+  "buyerSignals": [
+    {"index": 2, "quote": "Key phrase showing buying intent", "stage": "ready|researching|curious", "followUp": "How founder could reach this person"}
+  ],
+  "competitors": [
+    {"name": "ProductX", "sentiment": "loved|hated|meh", "weakness": "Gap founder can exploit"}
+  ],
+  "redFlags": [
+    {"index": 3, "issue": "Why this market might be bad", "severity": "dealbreaker|caution|minor"}
+  ],
+  "shills": [
+    {"index": 4, "reason": "Why this comment is suspicious"}
+  ]
 }
 
-Rules:
-- "index" refers to the comment number [1], [2], etc.
-- Only include items with strong signals, not every comment
-- "stage" must be: awareness, consideration, or decision
-- Be concise, max 50 words per text field
-- Return valid JSON only, no markdown`;
+RULES:
+- tldr: ONE actionable sentence. "Users want better UX" = useless. "D2C brands need Instagram-first agencies under $2k/month" = gold.
+- goldNuggets: Max 5. Problems people will PAY to solve. Skip generic complaints.
+- buyerSignals: Only people actively looking to spend money. Include their exact words.
+- competitors: Only if explicitly named. Note what people love/hate about them.
+- redFlags: Market saturation, price sensitivity, regulatory issues, or signs of low willingness to pay.
+- shills: Overly promotional comments, affiliate vibes, or suspiciously detailed product pitches.
+- If a category has nothing valuable, return empty array []. Don't pad with weak signals.
+- Return ONLY valid JSON, no markdown.`;
 
-    onProgress?.('Sending to AI model...');
+    onProgress?.('AI analyzing market signals...');
     
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -95,15 +165,15 @@ Rules:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert market researcher analyzing Reddit comments. Extract actionable insights about pain points, buying intent, and product recommendations. Always respond with valid JSON only.'
+            content: 'You are a ruthless startup analyst. Extract only actionable insights that help founders find product-market fit. No fluff, no generic advice. Respond with valid JSON only.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.3,
-        max_tokens: 2000,
+        temperature: 0.2,
+        max_tokens: 2500,
       }),
     });
 
@@ -113,7 +183,7 @@ Rules:
       return null;
     }
 
-    onProgress?.('Processing AI response...');
+    onProgress?.('Extracting actionable intel...');
     
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
@@ -123,7 +193,7 @@ Rules:
       return null;
     }
 
-    // Parse JSON from response (handle markdown code blocks)
+    // Parse JSON (handle markdown code blocks)
     let jsonStr = content;
     if (content.includes('```')) {
       const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -132,29 +202,48 @@ Rules:
     
     const parsed = JSON.parse(jsonStr.trim());
     
-    // Map indices back to actual comments
+    // Map to typed result
     const result: AIInsight = {
-      painPoints: (parsed.painPoints || []).map((p: { index: number; text: string; confidence: number }) => ({
-        text: p.text,
-        comment: topComments[p.index - 1] || topComments[0],
-        confidence: p.confidence || 0.8,
+      tldr: parsed.tldr || 'No clear actionable insight found.',
+      
+      marketSignals: {
+        demandStrength: parsed.marketSignals?.demandStrength || 'cold',
+        demandReason: parsed.marketSignals?.demandReason || 'Insufficient data',
+        priceRange: parsed.marketSignals?.priceRange || 'unclear',
+        urgency: parsed.marketSignals?.urgency || 'low',
+        urgencyReason: parsed.marketSignals?.urgencyReason || 'No urgency signals detected',
+      },
+      
+      goldNuggets: (parsed.goldNuggets || []).slice(0, 5).map((g: { index: number; insight: string; actionable: string }) => ({
+        insight: g.insight,
+        actionable: g.actionable,
+        comment: topComments[g.index - 1] || topComments[0],
       })),
-      buyingIntent: (parsed.buyingIntent || []).map((b: { index: number; text: string; stage: string }) => ({
-        text: b.text,
+      
+      buyerSignals: (parsed.buyerSignals || []).map((b: { index: number; quote: string; stage: string; followUp: string }) => ({
+        quote: b.quote,
+        stage: b.stage as 'ready' | 'researching' | 'curious',
+        followUp: b.followUp,
         comment: topComments[b.index - 1] || topComments[0],
-        stage: b.stage as 'awareness' | 'consideration' | 'decision',
       })),
-      solutions: (parsed.solutions || []).map((s: { index: number; text: string; productMentioned?: string }) => ({
-        text: s.text,
+      
+      competitors: (parsed.competitors || []).map((c: { name: string; sentiment: string; weakness: string; index?: number }) => ({
+        name: c.name,
+        sentiment: c.sentiment as 'loved' | 'hated' | 'meh',
+        weakness: c.weakness,
+        commentIndex: c.index || 0,
+      })),
+      
+      redFlags: (parsed.redFlags || []).map((r: { index: number; issue: string; severity: string }) => ({
+        issue: r.issue,
+        severity: r.severity as 'dealbreaker' | 'caution' | 'minor',
+        comment: topComments[r.index - 1] || topComments[0],
+      })),
+      
+      shills: (parsed.shills || []).map((s: { index: number; reason: string }) => ({
+        reason: s.reason,
         comment: topComments[s.index - 1] || topComments[0],
-        productMentioned: s.productMentioned,
       })),
-      shillWarnings: (parsed.shillWarnings || []).map((w: { index: number; text: string; reason: string }) => ({
-        text: w.text,
-        comment: topComments[w.index - 1] || topComments[0],
-        reason: w.reason,
-      })),
-      summary: parsed.summary || 'Analysis complete.',
     };
 
     return result;
@@ -163,4 +252,3 @@ Rules:
     return null;
   }
 }
-
