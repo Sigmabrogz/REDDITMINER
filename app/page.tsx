@@ -22,6 +22,7 @@ import { MarkdownPreview } from '@/components/markdown-preview';
 import { InsightsPanel } from '@/components/insights-panel';
 import { ExportDropdown } from '@/components/export-dropdown';
 import { HistorySidebar } from '@/components/history-sidebar';
+import { PickaxeIcon, BoltIcon, AlertIcon, StarIcon, GitHubIcon, XIcon, ArrowLeftIcon } from '@/components/icons';
 import confetti from 'canvas-confetti';
 
 export default function Home() {
@@ -141,7 +142,7 @@ export default function Home() {
       <header className="border-b-2 border-[var(--border-subtle)]">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">⛏️</span>
+            <PickaxeIcon size={28} className="text-[var(--accent-primary)]" />
             <h1 className="font-mono font-bold text-xl text-[var(--text-primary)]">
               THREAD<span className="text-[var(--accent-primary)]">MINER</span>
             </h1>
@@ -156,11 +157,9 @@ export default function Home() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all text-sm"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-              </svg>
+              <GitHubIcon size={16} />
               <span className="hidden sm:inline">Star</span>
-              <span className="text-[var(--accent-secondary)]">⭐</span>
+              <StarIcon size={14} className="text-[var(--accent-secondary)]" />
             </a>
             
             {/* Twitter/X */}
@@ -170,9 +169,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all text-sm"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
+              <XIcon size={14} />
               <span className="hidden sm:inline">Follow</span>
             </a>
           </div>
@@ -229,7 +226,7 @@ export default function Home() {
                           exit={{ opacity: 0, height: 0 }}
                           className="flex items-center gap-2 text-sm text-[var(--accent-tertiary)] bg-[var(--accent-tertiary)] bg-opacity-10 px-3 py-2 rounded-lg"
                         >
-                          <span>⚡</span>
+                          <BoltIcon size={16} />
                           <span>Cached result available - will load instantly!</span>
                         </motion.div>
                       )}
@@ -251,7 +248,7 @@ export default function Home() {
                         className="p-4 rounded-lg bg-[var(--error)] bg-opacity-10 border-2 border-[var(--error)] text-[var(--error)] text-sm"
                       >
                         <div className="flex items-start gap-3">
-                          <span className="text-lg">⚠️</span>
+                          <AlertIcon size={20} />
                           <div>
                             <p className="font-medium">Error</p>
                             <p className="mt-1 opacity-90">{store.error}</p>
@@ -297,22 +294,15 @@ export default function Home() {
                 onClick={handleBack}
                 className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M10 12L6 8l4-4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <ArrowLeftIcon size={16} />
                 New Thread
               </button>
 
               <div className="flex items-center gap-3">
                 {fromCache && (
-                  <span className="text-xs text-[var(--accent-tertiary)] bg-[var(--accent-tertiary)] bg-opacity-10 px-2 py-1 rounded">
-                    ⚡ from cache
+                  <span className="flex items-center gap-1 text-xs text-[var(--accent-tertiary)] bg-[var(--accent-tertiary)] bg-opacity-10 px-2 py-1 rounded">
+                    <BoltIcon size={12} />
+                    from cache
                   </span>
                 )}
                 {store.normalizedData && (

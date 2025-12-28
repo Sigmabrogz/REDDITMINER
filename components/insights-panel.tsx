@@ -8,6 +8,18 @@ import {
   AIAnalysisResult, 
   AnalyzedComment,
 } from '@/lib/ai-analysis';
+import { analyzeWithAI, AIInsight } from '@/lib/openrouter';
+import { 
+  FireIcon, 
+  MoneyIcon, 
+  CheckIcon, 
+  AlertIcon, 
+  TrophyIcon, 
+  SearchIcon,
+  SparklesIcon,
+  UserIcon,
+  StarIcon,
+} from '@/components/icons';
 
 interface InsightsPanelProps {
   data: NormalizedData;
@@ -17,9 +29,12 @@ type TabType = 'pains' | 'intents' | 'solutions' | 'shills' | 'top';
 
 export function InsightsPanel({ data }: InsightsPanelProps) {
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState({ step: '', percent: 0 });
   const [activeTab, setActiveTab] = useState<TabType>('pains');
+  const [useAI, setUseAI] = useState(true);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Run analysis on mount
   useEffect(() => {
@@ -28,19 +43,43 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
     async function runAnalysis() {
       setIsAnalyzing(true);
       setProgress({ step: 'Starting analysis...', percent: 0 });
+      setAiError(null);
 
       try {
-        const result = await analyzeComments(data.comments, {
+        // First, run pattern-based analysis (fast)
+        const patternResult = await analyzeComments(data.comments, {
           onProgress: (p) => {
             if (!cancelled) setProgress(p);
           },
         });
 
         if (!cancelled) {
-          setAnalysis(result);
+          setAnalysis(patternResult);
         }
+
+        // Then, try AI analysis if enabled
+        if (useAI && !cancelled) {
+          setProgress({ step: 'Running AI analysis...', percent: 50 });
+          
+          const aiResult = await analyzeWithAI(
+            data.comments,
+            data.thread.title,
+            (step) => {
+              if (!cancelled) setProgress({ step, percent: 75 });
+            }
+          );
+
+          if (!cancelled && aiResult) {
+            setAiInsight(aiResult);
+          } else if (!cancelled && !aiResult) {
+            setAiError('AI analysis unavailable. Using pattern matching.');
+          }
+        }
+
+        setProgress({ step: 'Complete!', percent: 100 });
       } catch (error) {
         console.error('Analysis failed:', error);
+        setAiError('Analysis failed. Using pattern matching only.');
       } finally {
         if (!cancelled) {
           setIsAnalyzing(false);
@@ -53,7 +92,7 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [data.comments]);
+  }, [data.comments, data.thread.title, useAI]);
 
   // Loading state
   if (isAnalyzing || !analysis) {
@@ -85,12 +124,12 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
     );
   }
 
-  const tabs: { id: TabType; label: string; count: number; emoji: string; color: string }[] = [
-    { id: 'pains', label: 'Pain Points', count: analysis.pains.length, emoji: '🔥', color: 'var(--error)' },
-    { id: 'intents', label: 'Buying Intent', count: analysis.intents.length, emoji: '💰', color: 'var(--accent-secondary)' },
-    { id: 'solutions', label: 'Solutions', count: analysis.solutions.length, emoji: '✅', color: 'var(--success)' },
-    { id: 'shills', label: 'Shill Warnings', count: analysis.shillWarnings.length, emoji: '⚠️', color: 'var(--warning, #f59e0b)' },
-    { id: 'top', label: 'Top Comments', count: analysis.topByEngagement.length, emoji: '🏆', color: 'var(--accent-tertiary)' },
+  const tabs: { id: TabType; label: string; count: number; icon: React.ReactNode; color: string }[] = [
+    { id: 'pains', label: 'Pain Points', count: analysis.pains.length, icon: <FireIcon size={16} />, color: 'var(--error)' },
+    { id: 'intents', label: 'Buying Intent', count: analysis.intents.length, icon: <MoneyIcon size={16} />, color: 'var(--accent-secondary)' },
+    { id: 'solutions', label: 'Solutions', count: analysis.solutions.length, icon: <CheckIcon size={16} />, color: 'var(--success)' },
+    { id: 'shills', label: 'Shill Warnings', count: analysis.shillWarnings.length, icon: <AlertIcon size={16} />, color: 'var(--warning, #f59e0b)' },
+    { id: 'top', label: 'Top Comments', count: analysis.topByEngagement.length, icon: <TrophyIcon size={16} />, color: 'var(--accent-tertiary)' },
   ];
 
   const activeTabData = tabs.find(t => t.id === activeTab)!;
@@ -108,6 +147,21 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
 
   return (
     <div className="space-y-6">
+      {/* AI Summary (if available) */}
+      {aiInsight && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <SparklesIcon size={18} className="text-purple-400" />
+            <span className="text-sm font-medium text-purple-400">AI Summary</span>
+          </div>
+          <p className="text-[var(--text-primary)] text-sm">{aiInsight.summary}</p>
+        </motion.div>
+      )}
+
       {/* Summary Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -132,7 +186,7 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
         </div>
         <div className="p-3 rounded-xl bg-[var(--bg-secondary)] border border-yellow-500/30 text-center">
           <span className="text-xl font-bold text-yellow-400">{analysis.summary.potentialShills}</span>
-          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Sus 👀</p>
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Suspicious</p>
         </div>
       </motion.div>
 
@@ -142,10 +196,27 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
         animate={{ opacity: 1 }}
         className="flex items-center justify-center gap-2"
       >
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[var(--accent-tertiary)]/10 text-[var(--accent-tertiary)] border border-[var(--accent-tertiary)]/30">
-          <span className="w-2 h-2 rounded-full bg-[var(--accent-tertiary)]" />
-          ⚡ Smart Pattern Analysis
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+          aiInsight 
+            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+            : 'bg-[var(--accent-tertiary)]/10 text-[var(--accent-tertiary)] border border-[var(--accent-tertiary)]/30'
+        }`}>
+          <span className={`w-2 h-2 rounded-full ${aiInsight ? 'bg-purple-400' : 'bg-[var(--accent-tertiary)]'}`} />
+          {aiInsight ? (
+            <>
+              <SparklesIcon size={12} />
+              AI-Powered Analysis
+            </>
+          ) : (
+            <>
+              <SearchIcon size={12} />
+              Smart Pattern Analysis
+            </>
+          )}
         </span>
+        {aiError && (
+          <span className="text-xs text-[var(--text-muted)]">{aiError}</span>
+        )}
       </motion.div>
 
       {/* Tab Navigation */}
@@ -170,7 +241,7 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
               borderColor: activeTab === tab.id ? tab.color : undefined,
             }}
           >
-            <span>{tab.emoji}</span>
+            <span style={{ color: activeTab === tab.id ? tab.color : undefined }}>{tab.icon}</span>
             <span>{tab.label}</span>
             <span 
               className="px-1.5 py-0.5 rounded text-xs"
@@ -201,7 +272,7 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
             style={{ backgroundColor: `color-mix(in srgb, ${activeTabData.color} 10%, transparent)` }}
           >
             <h3 className="font-semibold flex items-center gap-2" style={{ color: activeTabData.color }}>
-              <span>{activeTabData.emoji}</span> 
+              {activeTabData.icon}
               {activeTabData.label}
               <span className="text-xs font-normal text-[var(--text-muted)]">
                 ({activeTabData.count} found)
@@ -213,7 +284,7 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
           <div className="divide-y divide-[var(--border-subtle)] max-h-[600px] overflow-y-auto">
             {getActiveComments().length === 0 ? (
               <div className="p-8 text-center text-[var(--text-muted)]">
-                <span className="text-3xl block mb-2">🔍</span>
+                <SearchIcon size={32} className="mx-auto mb-2 opacity-50" />
                 No {activeTabData.label.toLowerCase()} detected in this thread.
               </div>
             ) : (
@@ -236,9 +307,19 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="text-xs text-[var(--text-muted)] text-center"
+        className="flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] text-center"
       >
-        ⚡ Analyzed using smart pattern matching • Detects pain points, buying intent, solutions & shills
+        {aiInsight ? (
+          <>
+            <SparklesIcon size={12} />
+            Analyzed using Mimo AI via OpenRouter
+          </>
+        ) : (
+          <>
+            <SearchIcon size={12} />
+            Analyzed using smart pattern matching
+          </>
+        )}
       </motion.p>
     </div>
   );
@@ -289,12 +370,13 @@ function CommentCard({ item, index, type, color }: CommentCardProps) {
 
           {/* Metadata */}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-            <span className="text-[var(--accent-secondary)]">u/{item.comment.author}</span>
+            <span className="flex items-center gap-1 text-[var(--accent-secondary)]">
+              <UserIcon size={12} />
+              u/{item.comment.author}
+            </span>
             <span>•</span>
             <span className="flex items-center gap-1">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
-              </svg>
+              <StarIcon size={12} />
               {item.comment.score}
             </span>
             
@@ -320,9 +402,10 @@ function CommentCard({ item, index, type, color }: CommentCardProps) {
               {item.shillReasons.map((reason, i) => (
                 <span 
                   key={i}
-                  className="px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] border border-yellow-500/30"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] border border-yellow-500/30"
                 >
-                  ⚠️ {reason}
+                  <AlertIcon size={10} />
+                  {reason}
                 </span>
               ))}
             </div>

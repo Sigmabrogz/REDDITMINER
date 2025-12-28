@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMinerStore } from '@/lib/store';
+import { LightbulbIcon, ChevronRightIcon } from '@/components/icons';
 
 export function AdvancedOptions() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,20 +20,7 @@ export function AdvancedOptions() {
           transition={{ duration: 0.2 }}
           className="inline-block"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-          >
-            <path
-              d="M6 4l4 4-4 4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ChevronRightIcon size={16} />
         </motion.span>
         Advanced Options
       </button>
@@ -114,8 +102,9 @@ export function AdvancedOptions() {
             </div>
             
             {/* Honest disclaimer */}
-            <p className="text-[10px] text-[var(--text-muted)] mt-4 pt-3 border-t border-[var(--border-subtle)] opacity-60">
-              💡 These options filter results after Reddit returns data. Reddit's API limits to ~500 comments per request.
+            <p className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] mt-4 pt-3 border-t border-[var(--border-subtle)] opacity-60">
+              <LightbulbIcon size={14} />
+              These options filter results after Reddit returns data. Reddit&apos;s API limits to ~500 comments per request.
             </p>
           </motion.div>
         )}

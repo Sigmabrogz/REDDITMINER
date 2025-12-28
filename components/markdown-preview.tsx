@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { NormalizedData } from '@/lib/schemas';
+import { TrophyIcon } from '@/components/icons';
 
 interface MarkdownPreviewProps {
   data: NormalizedData;
@@ -115,7 +116,10 @@ function CommentNode({ comment, getReplies, delay = 0, depth = 0 }: CommentNodeP
         {comment.awards > 0 && (
           <>
             <span className="text-[var(--text-muted)]">•</span>
-            <span className="text-[var(--accent-secondary)]">🏆 {comment.awards}</span>
+            <span className="flex items-center gap-1 text-[var(--accent-secondary)]">
+              <TrophyIcon size={12} />
+              {comment.awards}
+            </span>
           </>
         )}
       </div>
