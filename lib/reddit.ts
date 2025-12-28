@@ -84,44 +84,9 @@ export class RedditAPIError extends Error {
 }
 
 // ============================================
-// Fetch Raw Thread Data with Retry Logic
+// Fetch Raw Thread Data (Server-side only)
+// Note: Client-side uses direct browser fetch in page.tsx
 // ============================================
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  maxRetries: number = 2
-): Promise<Response> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-      
-      // If rate limited, wait and retry
-      if (response.status === 429 && attempt < maxRetries) {
-        const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        continue;
-      }
-      
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Network error');
-      
-      // Wait before retry on network errors
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-      }
-    }
-  }
-  
-  throw new RedditAPIError(
-    'Network error: Could not connect to Reddit. Check your internet connection.',
-    0,
-    'network'
-  );
-}
 
 export async function fetchRawThread(
   url: string,
@@ -132,32 +97,14 @@ export async function fetchRawThread(
 ): Promise<[RedditRawResponse, RedditRawResponse]> {
   const jsonUrl = buildJsonUrl(url, options);
   
-  let response: Response;
+  const response = await fetch(jsonUrl, {
+    headers: {
+      'Accept': 'application/json',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.reddit.com/',
+    },
+  });
   
-  try {
-    // Use browser-like User-Agent to avoid Reddit bot detection
-    const browserUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    
-    response = await fetchWithRetry(jsonUrl, {
-      headers: {
-        'User-Agent': browserUserAgent,
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.reddit.com/',
-      },
-      next: { revalidate: 300 }, // Cache for 5 minutes
-    });
-  } catch (error) {
-    if (error instanceof RedditAPIError) throw error;
-    throw new RedditAPIError(
-      'Network error: Could not connect to Reddit.',
-      0,
-      'network'
-    );
-  }
-  
-  // Handle specific HTTP errors with helpful messages
   if (!response.ok) {
     switch (response.status) {
       case 404:
@@ -178,15 +125,6 @@ export async function fetchRawThread(
           429,
           'rate_limit'
         );
-      case 500:
-      case 502:
-      case 503:
-      case 504:
-        throw new RedditAPIError(
-          'Reddit servers are having issues. Try again in a few minutes.',
-          response.status,
-          'server_error'
-        );
       default:
         throw new RedditAPIError(
           `Reddit returned an error (${response.status}). Try again later.`,
@@ -196,19 +134,8 @@ export async function fetchRawThread(
     }
   }
   
-  // Parse JSON
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    throw new RedditAPIError(
-      'Failed to parse Reddit response. The thread may be corrupted or too large.',
-      0,
-      'parse'
-    );
-  }
+  const data = await response.json();
   
-  // Validate response structure
   if (!Array.isArray(data) || data.length < 2) {
     throw new RedditAPIError(
       'Invalid response from Reddit. This might not be a valid thread URL.',

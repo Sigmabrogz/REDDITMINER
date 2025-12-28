@@ -62,7 +62,7 @@ People literally tell you what they want. You just need to listen at scale.
 
 ### ⚡ Performance
 
-- **Server-side fetching** - No CORS issues
+- **Direct browser fetching** - Reddit allows CORS, no proxy needed
 - **Smart caching** - 5-minute cache, instant repeat loads
 - **Depth control** - Quick scan (~50), Standard (~200), Deep dive (500+)
 - **Rate limit handling** - Automatic retry with backoff
@@ -135,55 +135,26 @@ npm start
 4. Click **Mine Thread**
 5. Export as JSON, Markdown, or CSV
 
-### API Endpoint
+### Programmatic Usage
 
-```bash
-curl -X POST http://localhost:3000/api/fetch-thread \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://reddit.com/r/startups/comments/...",
-    "depth": "level2",
-    "sort": "best",
-    "maxComments": 500,
-    "minScore": 0
-  }'
+ThreadMiner runs entirely client-side. You can use the core functions directly:
+
+```typescript
+import { fetchThreadClientSide, normalizeThread } from '@/lib/reddit';
+
+// Fetch raw Reddit data
+const raw = await fetchThreadClientSide(url, {
+  sort: 'best',
+  limit: 500,
+});
+
+// Normalize the data
+const normalized = normalizeThread(raw, {
+  depth: 'level2',
+  maxComments: 500,
+  minScore: 0,
+});
 ```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "thread": {
-      "id": "...",
-      "title": "...",
-      "author": "...",
-      "score": 1234,
-      "commentCount": 567
-    },
-    "comments": [...],
-    "meta": {
-      "totalComments": 200,
-      "maxDepth": 2,
-      "fetchedAt": "2024-..."
-    }
-  }
-}
-```
-
----
-
-## 📚 API Reference
-
-### POST `/api/fetch-thread`
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | string | required | Reddit thread URL |
-| `depth` | `"top"` \| `"level2"` \| `"full"` | `"level2"` | Comment depth |
-| `sort` | `"best"` \| `"top"` \| `"new"` \| `"controversial"` | `"best"` | Sort order |
-| `maxComments` | number | `500` | Max comments to return |
-| `minScore` | number | `0` | Filter by minimum upvotes |
 
 ---
 
