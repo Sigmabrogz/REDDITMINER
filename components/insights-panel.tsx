@@ -94,21 +94,50 @@ export function InsightsPanel({ data }: InsightsPanelProps) {
     );
   }
 
-  // Error state
+  // Error state - show helpful message
   if (error || !aiInsight) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="card py-12 text-center"
+        className="card py-12"
       >
-        <AlertIcon size={48} className="mx-auto mb-4 text-[var(--error)]" />
-        <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">
-          {error || 'Analysis unavailable'}
-        </h3>
-        <p className="text-sm text-[var(--text-muted)]">
-          Try refreshing or check back later.
-        </p>
+        <div className="text-center max-w-md mx-auto">
+          <SparklesIcon size={48} className="mx-auto mb-4 text-[var(--accent-primary)] opacity-50" />
+          <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">
+            AI Analysis Requires API Key
+          </h3>
+          <p className="text-sm text-[var(--text-muted)] mb-6">
+            The free OpenRouter API key has expired. To enable AI-powered insights:
+          </p>
+          <ol className="text-left text-sm text-[var(--text-secondary)] space-y-2 mb-6">
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] text-xs flex items-center justify-center">1</span>
+              <span>Get a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-[var(--accent-tertiary)] hover:underline">openrouter.ai/keys</a></span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] text-xs flex items-center justify-center">2</span>
+              <span>Create <code className="px-1 py-0.5 rounded bg-[var(--bg-tertiary)] text-xs">.env.local</code> in the project root</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] text-xs flex items-center justify-center">3</span>
+              <span>Add: <code className="px-1 py-0.5 rounded bg-[var(--bg-tertiary)] text-xs">NEXT_PUBLIC_OPENROUTER_API_KEY=your-key</code></span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] text-xs flex items-center justify-center">4</span>
+              <span>Restart the dev server</span>
+            </li>
+          </ol>
+          <a
+            href="https://openrouter.ai/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white font-medium hover:opacity-90 transition-opacity"
+          >
+            <SparklesIcon size={16} />
+            Get Free API Key
+          </a>
+        </div>
       </motion.div>
     );
   }
